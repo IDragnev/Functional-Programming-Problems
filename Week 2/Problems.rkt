@@ -84,9 +84,71 @@
   )
 
 
+(define % modulo)
+(define do-reverse-int (lambda (num result)
+                         (if (= num 0)
+                             result
+                             (let* (
+                                    [last (% num 10)]
+                                    [result (+ (* result 10) last)]
+                                    )
+                               (do-reverse-int (// num 10) result)
+                               ))))
+(define reverse-int (lambda (num) (do-reverse-int num 0)))
+                               
+                               
+(module+ test
+  (test-case "The reverse of 0 is 0"
+             (check-eq? (reverse-int 0) 0))
+  (test-case "Can reverse a big number"
+             (check-eq? (reverse-int 12345) 54321))
+  (test-case "Can reverse a small number"
+             (check-eq? (reverse-int 1) 1))
+  )
+
+(define palindrome? (lambda (x) (= x (reverse-int x))))
+
+(module+ test
+  (test-case "0 is a palindrome"
+             (check-true (palindrome? 0)))
+  (test-case "Can detect a non-palindrome"
+             (check-false (palindrome? 122)))
+  (test-case "Long palindrome"
+             (check-true (palindrome? 1234321)))
+  )
 
 
+(define divisor? (lambda (d num) (= (% num d) 0)))
+(define do-sum-divisors (lambda (num d result)
+                           (if (= d 0)
+                               result
+                               (do-sum-divisors
+                                  num
+                                  (- d 1)
+                                  (if (divisor? d num)
+                                     (+ d result)
+                                     result
+                                   )
+                            ))))
+(define sum-divisors (lambda (num) (do-sum-divisors num num 0)))
+
+(module+ test
+  (test-case "Nothing divides zero"
+             (check-eq? (sum-divisors 0) 0))
+  (test-case "Dividors of a prime number are just it and one"
+             (check-eq? (sum-divisors 19) 20))
+  (test-case "Dividors of a non-prime number are many"
+             (check-eq? (sum-divisors 4) 7))
+  )
 
 
+(define perfect? (lambda (num) (= (- (sum-divisors num) num) num)))
 
-
+(module+ test
+  (test-case "Zero is perfect"
+             (check-true (perfect? 0)))
+  (test-case "Recognizes perfect number"
+             (check-true (perfect? 33550336)))
+  (test-case "Recognizes non-perfect number"
+             (check-false (perfect? 4)))
+  )
