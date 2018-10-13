@@ -152,3 +152,86 @@
   (test-case "Recognizes non-perfect number"
              (check-false (perfect? 4)))
   )
+
+
+(define has-divisor-in-range? (lambda (num start end)
+                                 (if (> start end)
+                                     #f
+                                     (or (divisor? start num)
+                                          (has-divisor-in-range? num (+ start 1) end)
+                                     )
+                                   )))
+(define prime? (lambda (num) (and (not (= 1 num)) (not (has-divisor-in-range? num 2 (- num 1))))))
+
+(module+ test
+  (test-case "One is not prime"
+             (check-false (prime? 1)))
+  (test-case "Two is prime"
+             (check-true (prime? 2)))
+  (test-case "Simple prime"
+             (check-true (prime? 107)))
+  (test-case "Simple non-prime"
+             (check-false (prime? 204)))
+  )
+
+(define check-increasing (lambda (num last-checked)
+                           (or (= num 0)
+                               ( let ([last-digit (% num 10)])
+                                  (and
+                                   (< last-digit last-checked)
+                                   (check-increasing (// num 10) last-digit)
+                                   )))))
+(define increasing? (lambda (num) (check-increasing num (+ num 1))))
+
+(module+ test
+  (test-case "One-digit number is increasing"
+             (check-true (increasing? 0)))
+  (test-case "Simple increasing"
+             (check-true (increasing? 1234569)))
+  (test-case "Simple non-increasing"
+             (check-false (increasing? 54213)))
+  )
+
+(define transform (lambda (num factor result)
+                    (if (= num 0)
+                        result
+                        (let (
+                              [digit (% num 2)]
+                              [new-factor (* 10 factor)]
+                              )
+                          (transform
+                            (// num 2)
+                             new-factor
+                             (+ result (* digit factor))
+                                )))))
+(define toBinary (lambda (num)
+                   (transform num 1 0)))
+
+(module+ test
+  (test-case "0 in binary is 0"
+             (check-eq? (toBinary 0) 0))
+  (test-case "Big number to binary"
+             (check-eq? (toBinary 294) 100100110))
+  )
+
+(define doToDecimal (lambda (num power result)
+                      (if (= num 0)
+                          result
+                          ( let* (
+                                 [LSB (% num 10)]
+                                 [product (* LSB (fast-pow 2 power))]
+                                 [result (+ result product)]
+                                 )
+                             (doToDecimal
+                               (// num 10)
+                               (+ power 1)
+                               result)))))
+                      
+(define toDecimal (lambda (num) (doToDecimal num 0 0)))
+
+(module+ test
+  (test-case "0 in decimal is 0"
+             (check-eq? (toDecimal 0) 0))
+  (test-case "Big number to decimal"
+             (check-eq? (toDecimal  100100110) 294))
+  )
