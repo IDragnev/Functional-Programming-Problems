@@ -3,16 +3,17 @@
 
 (require rackunit)
 
-(define even? (lambda (x) (= (modulo x 2) 0)))
-(define // (lambda (x y) (quotient x y)))
-(define fast-pow (lambda (num pow)
-                   (cond
-                     [(= pow 0) 1]
-                     [(even? pow)
-                      (let ([x (fast-pow num (// pow 2))])
-                                    (* x x))]
-                     [else (* num (fast-pow num (- pow 1)))]
-                     )))
+(define (even? x) (= (modulo x 2) 0))
+(define (// x y) (quotient x y))
+
+(define (fast-pow x n)
+  (define (square x) (* x x))
+  (cond
+    [(= n 0) 1]
+    [(< n 0) (/ 1 (fast-pow x (- n)))]
+    [(even? n) (square (fast-pow x (/ n 2)))]
+    [else (* x (fast-pow x (- n 1)))]
+    ))
 
 (module+ test
  (test-case "Zero on any power is zero"
@@ -33,16 +34,19 @@
      (check-eq? (fast-pow 2 3) 8))
 )
 
-(define square (lambda (x) (* x x)))
-(define discriminant (lambda (a b c)
-                       (- (square b) (* 4 a c))))
-(define roots (lambda (a b c)
-                ( let ([D (discriminant a b c)])
-                   (cond
-                     [(= D 0) 1]
-                     [(> D 0) 2]
-                     [else 0]
-                     ))))
+(define (square x) (* x x))
+
+(define (roots a b c)
+  (define (discriminant a b c) (- (square b) (* 4 a c)))
+  ( let ([D (discriminant a b c)])
+     (cond
+       [(and (= a 0) (= b 0) (= c 0)) 'inf]
+       [(and (= a 0) (= b 0)) 0]
+       [(= a 0) 1]
+       [(= D 0) 1]
+       [(> D 0) 2]
+       [else 0]
+   )))
 
 (module+ test
     (test-case "D < 0 means no roots"
@@ -51,14 +55,22 @@
                (check-equal? (roots 1 2 1) 1))
     (test-case "D > 0 means two roots"
                (check-equal? (roots 2 5 1) 2))
+    (test-case "Linear equation has one root"
+               (check-equal? (roots 0 5 1) 1))
+    (test-case "(0,0,0) has infinite number of roots"
+               (check-equal? (roots 0 0 0) 'inf))
+    (test-case "(0, 0, c) has zero roots"
+               (check-equal? (roots 0 0 1) 0))
   )
 
-(define do-factorial (lambda (n result)
-                       (if (= n 0)
-                           result
-                           (do-factorial (- n 1) (* result n))
-                            )))
-(define factorial (lambda (n) (do-factorial n 1)))
+(define (factorial n)
+  (define  (for i result)
+      (if (> i n)
+          result
+          (for (+ i 1) (* result i))
+          ))
+  (for 2 1))
+    
 
 (module+ test
   (test-case "0! = 1"
@@ -67,34 +79,36 @@
              (check-equal? (factorial 5) 120))
   )
 
-(define n-fib (lambda (n a b)
-                (case n
-                  [(0) a]
-                  [(1) b]
-                  [else (n-fib (- n 1) b (+ a b))]
-                   )))
-(define fib (lambda (n) (n-fib n 0 1)))
 
+(define (fib n)
+  (define (for i prev curr)
+    (if (= i n)
+         prev
+        (for (+ i 1) curr (+ prev curr))
+     ))
+  (for 0 0 1))
 
 (module+ test
-  (test-case "The first fibonacci num is 0"
+  (test-case "F(0)"
              (check-equal? (fib 0) 0))
-  (test-case "The 8th fibonacci num is 21"
+  (test-case "F(8)"
              (check-equal? (fib 8) 21))
   )
 
 
 (define % modulo)
-(define do-reverse-int (lambda (num result)
-                         (if (= num 0)
-                             result
-                             (let* (
-                                    [last (% num 10)]
-                                    [result (+ (* result 10) last)]
-                                    )
-                               (do-reverse-int (// num 10) result)
-                               ))))
-(define reverse-int (lambda (num) (do-reverse-int num 0)))
+
+(define (reverse-int num) 
+  (define (helper num result)
+     (if (= num 0)
+          result
+         (let* (
+                [last (% num 10)]
+                [result (+ (* result 10) last)]
+                )
+            (helper (// num 10) result)
+       )))
+   (helper num 0))
                                
                                
 (module+ test
@@ -106,7 +120,7 @@
              (check-eq? (reverse-int 1) 1))
   )
 
-(define palindrome? (lambda (x) (= x (reverse-int x))))
+(define (palindrome? x) (= x (reverse-int x)))
 
 (module+ test
   (test-case "0 is a palindrome"
@@ -117,20 +131,18 @@
              (check-true (palindrome? 1234321)))
   )
 
-
-(define divisor? (lambda (d num) (= (% num d) 0)))
-(define do-sum-divisors (lambda (num d result)
-                           (if (= d 0)
-                               result
-                               (do-sum-divisors
-                                  num
-                                  (- d 1)
-                                  (if (divisor? d num)
-                                     (+ d result)
-                                     result
-                                   )
-                            ))))
-(define sum-divisors (lambda (num) (do-sum-divisors num num 0)))
+(define (divisor? d num) (= (% num d) 0))
+(define (sum-divisors num)
+  (define (for i result)
+           (if (>= i num)
+                result
+                (for
+                   (+ i 1)
+                   (if (divisor? i num)
+                        (+ i result)
+                        result
+     ))))
+  (for 1 num))
 
 (module+ test
   (test-case "Nothing divides zero"
@@ -142,7 +154,7 @@
   )
 
 
-(define perfect? (lambda (num) (= (- (sum-divisors num) num) num)))
+(define (perfect? num) (= (- (sum-divisors num) num) num))
 
 (module+ test
   (test-case "Zero is perfect"
@@ -154,14 +166,18 @@
   )
 
 
-(define has-divisor-in-range? (lambda (num start end)
-                                 (if (> start end)
-                                     #f
-                                     (or (divisor? start num)
-                                          (has-divisor-in-range? num (+ start 1) end)
-                                     )
-                                   )))
-(define prime? (lambda (num) (and (not (= 1 num)) (not (has-divisor-in-range? num 2 (- num 1))))))
+(define (prime? num)
+  (define stop (sqrt num))
+  (define (for i)
+            (if (>= i stop)
+                 #t
+                (and (not (divisor? i num))
+                     (for (+ i 1))
+                )))
+  (cond
+    [(= num 1) #f]
+    [else (for 2)]
+   ))
 
 (module+ test
   (test-case "One is not prime"
@@ -174,14 +190,16 @@
              (check-false (prime? 204)))
   )
 
-(define check-increasing (lambda (num last-checked)
-                           (or (= num 0)
-                               ( let ([last-digit (% num 10)])
-                                  (and
-                                   (< last-digit last-checked)
-                                   (check-increasing (// num 10) last-digit)
-                                   )))))
-(define increasing? (lambda (num) (check-increasing num (+ num 1))))
+(define (increasing? num)
+  (define (for num digit)
+    (if (= 0 num)
+         #t
+         (let ([last (% num 10)])
+           (and
+            (< last digit)
+            (for (// num 10) last)
+   ))))
+  (for num 10))
 
 (module+ test
   (test-case "One-digit number is increasing"
@@ -192,20 +210,22 @@
              (check-false (increasing? 54213)))
   )
 
-(define transform (lambda (num factor result)
-                    (if (= num 0)
-                        result
-                        (let (
-                              [digit (% num 2)]
-                              [new-factor (* 10 factor)]
-                              )
-                          (transform
-                            (// num 2)
-                             new-factor
-                             (+ result (* digit factor))
-                                )))))
-(define toBinary (lambda (num)
-                   (transform num 1 0)))
+(define (numberSystemNtoK num N K)
+  (define (for num factor result)
+            (if (= num 0)
+                result
+                (let (
+                     [digit (% num K)]
+                     [new-factor (* N factor)]
+                     )
+                  (for
+                    (// num K)
+                     new-factor
+                    (+ result (* digit factor))
+             ))))
+  (for num 1 0))
+
+(define (toBinary num) (numberSystemNtoK num 10 2))
 
 (module+ test
   (test-case "0 in binary is 0"
@@ -214,20 +234,7 @@
              (check-eq? (toBinary 294) 100100110))
   )
 
-(define doToDecimal (lambda (num power result)
-                      (if (= num 0)
-                          result
-                          ( let* (
-                                 [LSB (% num 10)]
-                                 [product (* LSB (fast-pow 2 power))]
-                                 [result (+ result product)]
-                                 )
-                             (doToDecimal
-                               (// num 10)
-                               (+ power 1)
-                               result)))))
-                      
-(define toDecimal (lambda (num) (doToDecimal num 0 0)))
+(define (toDecimal num) (numberSystemNtoK num 2 10))
 
 (module+ test
   (test-case "0 in decimal is 0"
