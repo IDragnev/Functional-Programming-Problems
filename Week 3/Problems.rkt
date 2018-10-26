@@ -152,4 +152,7 @@
    )
 
 
+(define (constantly c) (lambda (x) c))
+(define (flip f) (lambda (x y) (f y x)))
+(define (complement p?) (lambda (x) (not (p? x))))
                                   
