@@ -3,15 +3,13 @@
 (require rackunit)
 (require math)
 
-(define (accumulate acc proc begin end advance mapF stopPred)
-  (if (stopPred begin end)
-       acc
-      (accumulate (proc acc (mapF begin)) proc (advance begin) end advance mapF stopPred)))
+(define (id x) x)
+(define (++ x) (+ 1 x))
 
-;;(define (accumulate-i acc proc begin end advance mapF stopPred)
-  ;;(if (stopPred begin end)
-    ;;   acc
-      ;;(accumulate-i (proc (mapF begin) acc) proc (advance begin) end advance mapF stopPred)))
+(define (accumulate acc proc begin end next mapF stop?)
+  (if (stop? begin end)
+       acc
+      (accumulate (proc acc (mapF begin)) proc (next begin) end next mapF stop?)))
 
 (define (!! n)
   (accumulate
@@ -20,10 +18,9 @@
    (if (even? n) 2 1)
    n
    (lambda (x) (+ x 2))
-   (lambda (x) x)
-   (lambda (begin end) (> begin end))
-   ))
-
+   id
+   >
+ ))
 
 (module+ test
   (test-case "5!!"
@@ -37,10 +34,10 @@
    *
    1
    k
-   (lambda (k) (+ k 1))
+   ++
    (lambda (k) (/ (- n (- k 1)) k))
-   (lambda (begin end) (> begin end)))
-   )
+   >
+   ))
 
 (module+ test
   (test-case "n choose 0 is 1"
@@ -57,10 +54,10 @@
    +
    0
    n
-   (lambda (k) (+ k 1))
+   ++
    (lambda (k) (nchk n k))
-   (lambda (begin end) (> begin end)))
-  )
+   >
+  ))
 
 (module+ test
   (test-case "2^0 = 1"
@@ -73,18 +70,17 @@
              (check-equal? (2^ 12) 4096))
    )
 
-
 (define (divisors-sum n)
-  (define (divisor? k) (= (modulo n k) 0))
+  (define (divisor? k) (zero? (modulo n k)))
   (accumulate
    0
    +
    1
    n
-   (lambda (k) (+ k 1))
+   ++
    (lambda (k) (if (divisor? k) k 0))
-   (lambda (begin end) (> begin end)))
-  )
+   >
+  ))
 
 (module+ test
   (test-case "if n is prime -> n + 1"
@@ -93,18 +89,16 @@
              (check-equal? (divisors-sum 33550336) 67100672))
   )
 
-
 (define (count p? a b)
   (accumulate
    0
    +
    a
    b
-   (lambda (k) (+ k 1))
+   ++
    (lambda (k) (if (p? k) 1 0))
-   (lambda (begin end) (> begin end)))
-  )
-
+   >
+  ))
 
 (module+ test
   (test-case
@@ -113,11 +107,10 @@
   (test-case
    "1 has no divisors in [2 ; n], n >= 2"
    (check-equal?
-    (count (lambda (x) (= (modulo 1 x) 0)) 2 10)
+    (count (lambda (x) (zero? (modulo 1 x))) 2 10)
      0
     ))
   )
-
 
 (define (all p? a b)  (= (count p? a b) (+ (- b a) 1)))
 (define (any p? a b)  (> (count p? a b) 0))
@@ -133,9 +126,8 @@
              (check-false (any (lambda (x) (= (modulo 1 x) 0)) 2 10)))
   )
 
-
 (define (prime? n)
-  (define (divisor? k) (= (modulo n k) 0))
+  (define (divisor? k) (zero? (modulo n k)))
   (and
    (not (= n 1))
    (not (any (lambda (x) (divisor? x)) 2 (sqrt n)))
@@ -150,7 +142,6 @@
   (test-case "107 is a prime"
              (check-true (prime? 107)))
    )
-
 
 (define (constantly c) (lambda (x) c))
 (define (flip f) (lambda (x y) (f y x)))
