@@ -65,14 +65,14 @@
     (if (null? ls)
         result
         (for (cdr ls)
-                 (cons (car ls) result))))
+             (cons (car ls) result))))
  (for ls '()))
 
 (define-test-suite testReverse
   (test-case "()"
              (check-equal? (reverse '()) '()))
   (test-case "Reverses a large list"
-             (check-equal? (reverse '(4 3 2 1)) '(1 2 3 4)))
+             (check-equal? (reverse (range 1 10000)) (range 9999 0 -1)))
 )
 
 (define (map ls f)
@@ -88,7 +88,9 @@
               (map '(1 2 3 4) (lambda (x) (* x x)))
               '(1 4 9 16)))
   (test-case "identity on a long list"
-             (map (range 1 999999) id) (range 1 999999))
+             (check-equal?
+              (map (range 1 999999) id)
+              (range 1 999999)))
   )
 
 (define (filter p? ls)
@@ -112,16 +114,74 @@
 )
 
 (define (nth n ls)
-  (if (zero? n)
-      (car ls)
-      (nth (-- n) (cdr ls))))
+  (cond
+      [(and (null? ls) (>= n 0)) #f]
+      [(zero? n) (car ls)]
+      [else (nth (-- n) (cdr ls))]
+ ))
 
 (define-test-suite testNth
   (test-case "First"
              (check-equal? (nth 0 '(1 2 3)) 1))
   (test-case "Fourth"
              (check-equal? (nth 4 '(1 2 3 4 5)) 5))
+  (test-case "Out of range"
+             (check-equal? (nth 4 '(1 2 3 4)) #f)
+             (check-equal? (nth 100 '(1 2 3)) #f))
 )
+
+(define (zip f firstList secondList)
+  (define (for firstList secondList result)
+    (if (null? firstList)
+         (reverse result)
+         (for (cdr firstList)
+              (cdr secondList)
+              (cons (f (car firstList)
+                       (car secondList))
+                    result))))
+  (for firstList secondList '()))
+
+(define-test-suite testZip
+  (test-case "Sum"
+             (check-equal?
+              (zip + (range 1 11) (range 1 11))
+              (range 2 21 2)))
+  (test-case "Square"
+             (check-equal?
+              (zip * (range 1 11) (range 1 11))
+              (map (range 1 11) (lambda (x) (* x x)))))
+)
+
+(define (stop? begin end) (equal? begin end))
+(define (applyToHead f) (lambda (ls) (f (car ls))))
+
+(define-test-suite testAnyForLists
+  (test-case "True"
+             (check-true
+              (any? (range 1 10) '() (applyToHead prime?) cdr stop?))
+             (check-true
+              (any? (range 1 100) '() (applyToHead even?) cdr stop?)))
+  (test-case "False"
+             (check-false (any? '() '() (applyToHead prime?) cdr stop?))
+             (check-false
+              (any? (range 4 100 2) '() (applyToHead prime?) cdr stop?))
+             (check-false
+              (any? (range 2 50) '() (applyToHead zero?) cdr stop?)))
+  )
+
+(define-test-suite testAllForLists
+  (test-case "True"
+             (check-true (all? '() '() (applyToHead prime?) cdr stop?))
+             (check-true
+              (all? '(3 5 7 11 13) '() (applyToHead prime?) cdr stop?))
+             (check-true
+              (all? (range 2 100 2) '() (applyToHead even?) cdr stop?)))
+  (test-case "False"
+             (check-false
+              (all? '(2 3 5 7 10 11) '() (applyToHead prime?) cdr stop?))
+             (check-false
+              (all? '(0 0 0 1 0 0) '() (applyToHead zero?) cdr stop?)))
+  )
 
 (module+ test
   (require rackunit/text-ui)
@@ -131,4 +191,7 @@
   (run-tests testMap)
   (run-tests testFilter)
   (run-tests testNth)
+  (run-tests testZip)
+  (run-tests testAnyForLists)
+  (run-tests testAllForLists)
   )
