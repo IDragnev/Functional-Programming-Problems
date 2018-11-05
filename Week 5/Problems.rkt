@@ -206,9 +206,28 @@
    '()
    list))
 
+(define (id x) x)
+
+(define (compose . fns)
+  (foldr
+   (lambda (f g) (lambda (x) (f (g x))))
+   id
+   fns))
+
+(define-test-suite testCompose
+  (test-case "id"
+             (check-equal?
+              ((compose id id id id id) 10)
+              10))
+  (test-case "++"
+             (check-equal?
+              ((compose ++ ++ ++ ++ ++) 0)
+              5)))
+
 (module+ test
   (require rackunit/text-ui)
   (run-tests testSorted)
   (run-tests testCollectUniques)
   (run-tests testMember)
-  (run-tests testInsert))
+  (run-tests testInsert)
+  (run-tests testCompose))
