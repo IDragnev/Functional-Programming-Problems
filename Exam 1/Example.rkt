@@ -85,7 +85,9 @@
           (if (equal? head current)
               (for current (++ times) result tail)
               (for head 1 (append result (list times current)) tail)))))
-  (for (car lst) 1 '() (cdr lst)))
+  (if (null? lst)
+      '()
+      (for (car lst) 1 '() (cdr lst))))
 
 
 
