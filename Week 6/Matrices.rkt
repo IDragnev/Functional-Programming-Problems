@@ -76,4 +76,8 @@
                 m2t))
            m1)))
 
+(define (scaleVector u n)
+  (map (lambda (x) (* x n)) u))
+(define (scaleMatrix m n)
+  (map (lambda (row) (scaleVector row n)) m))
 
