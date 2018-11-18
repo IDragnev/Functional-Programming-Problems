@@ -1,5 +1,15 @@
 #lang racket
 
+(provide makeHash
+         keys
+         values
+         del-assoc
+         add-assoc
+         search
+         assoc
+         assqv
+         assq)
+
 (define (makeHash f keys)
   (map  (lambda (key) (cons key (f key))) keys))
 
