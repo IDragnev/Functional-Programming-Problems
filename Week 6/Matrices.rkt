@@ -5,6 +5,11 @@
 (define (-- n) (- n 1))
 (define (++ n) (+ n 1))
 
+(define (foldl op result list)
+  (if (null? list)
+      result
+      (foldl op (op result (car list)) (cdr list))))
+
 (define (accumulate op result start end f next stop?)
   (if (stop? start end)
       result
@@ -78,6 +83,52 @@
 
 (define (scaleVector u n)
   (map (lambda (x) (* x n)) u))
+
 (define (scaleMatrix m n)
   (map (lambda (row) (scaleVector row n)) m))
 
+(define (countStartingZeros row)
+  (define (for n row)
+    (if (or (null? row)
+            (not (zero? (car row))))
+         n
+      (for (++ n) (cdr row))))
+  (for 0 row))
+
+(define (triangular? m)
+  (define (for i m)
+    (or (null? m)
+        (and
+         (eqv? (countStartingZeros (car m)) i)
+         (for (++ i) (cdr m)))))
+    (and (eqv? (numberOfRows m)(numberOfCols m))
+         (for 0 m)))
+
+(define (rcons list x) (cons x list))
+
+(define (mainDiag m)
+  (accumulate
+   rcons '()
+   (-- (numberOfRows m)) 0
+   (lambda (i) (list-ref (row i m) i))
+   -- <))
+
+(define (secondDiag m)
+  (let ([cols (-- (numberOfCols m))])    
+    (accumulate
+     rcons '()
+     (-- (numberOfRows m)) 0
+     (lambda (i) (list-ref (row i m) (- cols i)))
+     -- <)))
+
+(define (descartes lhs rhs)
+  (define (collectPairs x)
+    (foldl
+     (lambda (result y) (cons (cons x y) result))
+     '()
+     rhs))
+  (foldl
+   (lambda (result x)
+     (append result (collectPairs x)))                 
+   '()
+   lhs))
