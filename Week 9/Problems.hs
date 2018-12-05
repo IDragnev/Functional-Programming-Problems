@@ -1,6 +1,6 @@
 module Problems where
 
-import Prelude hiding (sum, product, map, take, reverse, all, any, less, minimum, maximum, foldl, foldr, fst, snd)
+import Prelude hiding (append, sum, product, map, take, reverse, all, any, less, minimum, maximum, foldl, foldr, fst, snd)
 
 type Point = (Double, Double)
 
@@ -20,6 +20,8 @@ foldr op nv (h:t) = op h (foldr op nv t)
 
 map op [] = []
 map op (h:t) = (op h) : map op t
+
+append to what = foldr (:) what to
 
 minimum (h:t) = foldl min h t
 
@@ -43,7 +45,9 @@ sumDivisors n = sum [ x | x<-[1..n], n `mod` x == 0]
 isPrime 0 = False
 isPrime 1 = False
 isPrime 2 = True
-isPrime n = (sumDivisors n) == n + 1
+--isPrime n = (sumDivisors n) == n + 1
+isPrime n = null [ m | m<-[2..sqn], n `mod` m == 0 ]
+ where sqn = floor (sqrt (fromIntegral n))
 
 descartes [] _ = []
 descartes _ [] = []
@@ -79,3 +83,9 @@ countOccurances x (h:t)
 histogram [] = []
 histogram list = foldl (\ result x -> (makePair x) : result)  [] (makeSet list)
  where makePair x = (x, countOccurances x list)
+
+pythTriples = [ (a, b, c) | c<-[5..], b<-[1..c], a<-[1..b], a^2 + b^2 == c^2 ]
+
+primes' = sieve [2..]
+ where sieve (h:t) = h : sieve (dropMultiplesOf h t)
+       dropMultiplesOf x list = filter  (\y -> y `mod` x /= 0)  list
