@@ -53,6 +53,7 @@
                     (cdr list))))
            (del-assoc v G))
       G))
+
    
 (define (dfsPath u v G)
   (define (dfs result)
