@@ -1,6 +1,6 @@
 module Problems where
 
-import Prelude hiding (append, sum, product, map, take, reverse, all, any, less, minimum, maximum, foldl, foldr, fst, snd)
+import Prelude hiding (iterate, splitAt, cycle, zipWith, zip, unzip, append, sum, product, map, take, reverse, all, any, less, minimum, maximum, foldl, foldr, fst, snd)
 
 type Point = (Double, Double)
 
@@ -89,3 +89,74 @@ pythTriples = [ (a, b, c) | c<-[5..], b<-[1..c], a<-[1..b], a^2 + b^2 == c^2 ]
 primes' = sieve [2..]
  where sieve (h:t) = h : sieve (dropMultiplesOf h t)
        dropMultiplesOf x list = filter  (\y -> y `mod` x /= 0)  list
+
+maxRepeated [] = 0
+maxRepeated (h:t) = maximum (helper [] 1 h t)
+ where
+  helper lens count _ [] = (count:lens)
+  helper lens count last (h:t)
+   | h == last = helper lens (count + 1) h t
+   | otherwise = helper (count : lens) 1 h t
+
+compress :: Eq t => [t] -> [t]
+compress [] = []
+--compress (h:t) = helper [h] h t
+-- where
+--   helper result _ [] = result
+--   helper result last (h:t) 
+--    | h == last = helper result last t
+--   | otherwise = helper (result ++ [h]) h t
+compress [x] = [x]
+compress (x:y:t) 
+ | x == y = compress (y:t)
+ | otherwise = x : compress (y:t)
+
+zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith f [] _ = []
+zipWith f _ [] = []
+zipWith f (x:xs) (y:ys) = (f x y) : zipWith f xs ys
+
+zip = zipWith (,)
+
+unzip :: [(a, b)] -> ([a], [b])
+unzip list = foldl (\(lhs, rhs) (x,y) -> (x:lhs, y:rhs)) ([],[]) list 
+
+quickSort [] = []
+quickSort (h:t) = smaller ++ (h:greater)
+ where 
+   smaller = quickSort (filter (<h) t)
+   greater = quickSort (filter (>=h) t)
+
+cycle [] = []
+--cycle = list ++ cycle list
+cycle list = helper list
+ where helper (h:t)
+        | null t = h : helper list
+        | otherwise = h : helper t
+
+duplicate list = reverse (foldl (\ result x -> x:x:result) [] list)
+
+merge :: Ord a => [a] -> [a] -> [a]
+merge [] rhs = rhs
+merge lhs [] = lhs
+merge (x:xs) (y:ys) 
+ | x <= y = x : merge xs (y:ys)
+ | otherwise = y : merge (x:xs) ys
+
+splitAt _ [] = ([], [])
+splitAt n list = (head, tail)
+ where 
+  head = take n list
+  tail = drop n list
+
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort list = 
+ let 
+   middle = (length list) `div` 2
+   split = splitAt middle list
+   lhs = mergeSort (fst split)
+   rhs = mergeSort (snd split)
+  in merge lhs rhs
+
+iterate f x = let y = f x in x : iterate f y
