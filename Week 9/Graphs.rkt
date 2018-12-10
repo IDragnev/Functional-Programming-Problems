@@ -29,6 +29,24 @@
 
 (define vertices keys)
 
+(define (foldl op result list)
+  (if (null? list)
+      result
+      (foldl op (op result (car list)) (cdr list))))
+
+(define (edges G)
+  (define (collectEdges u G)
+    (foldl
+     (lambda (result v)
+       (cons (cons u v) result))
+     '()
+     (children u G)))
+  (foldl
+   (lambda (result v)
+     (append (collectEdges v G) result))
+   '()
+   (vertices G)))
+
 (define (children v G)
   (cdr (assoc v G)))
 
@@ -90,4 +108,67 @@
                G)]
        )))
   (dfs-search (list u)))
-              
+
+(define (bfsPath u v G)
+  
+  (define (extendPath path)
+    (map (lambda(w) (cons w path))
+         (children (car path) G)))
+  (define (remains-acyclic? path)
+    (not (memv (car path) (cdr path))))
+  (define (extendAcyclic path)
+    (filter remains-acyclic? (extendPath path)))
+ 
+  (define (extendLevel level)
+    (apply append (map extendAcyclic level)))
+  (define (targetPath path)
+    (and (equal? (car path) v) (reverse path)))
+  (define (bfsLevel level)
+    (and (not (null? level))
+         (or (search targetPath level)
+             (bfsLevel (extendLevel level)))))
+
+  (bfsLevel (list (list u))))
+
+(define (add-if-missing x list)
+  (if (member x list)
+      list
+      (cons x list)))
+
+(define (addEdge u v G)
+  (let ([G-with-u-v (insertVertex v (insertVertex u G))])
+    (add-assoc u (add-if-missing v (children u G-with-u-v)) G-with-u-v)))
+
+(define (removeEdge u v G)
+  (add-assoc u
+             (filter
+              (lambda (w) (not (equal? w v)))
+              (children u G))
+             G))
+
+(define (out-degree v G)
+  (length (children v G)))
+
+(define (in-degree u G)
+  (foldl + 0 (map (lambda (v) (if (edge? v u G) 1 0)) (vertices G))))
+
+(define (acyclic? G)
+  (define (dfs path)
+    (let ([current (car path)])
+      (or (member current (cdr path))
+          (searchChild 
+           (lambda (child) (dfs (cons child path)))
+           current
+           G))))
+  (not (search
+        (lambda (v) (dfs (list v)))
+        (vertices G))))
+
+(define (makeEmptyGraph vertices)
+  (map (lambda (v) (cons v '())) vertices))
+
+(define (invert G)
+  (foldl
+   (lambda (result edge) (addEdge (cdr edge) (car edge) result))
+   (makeEmptyGraph (vertices G))
+   (edges G)))
