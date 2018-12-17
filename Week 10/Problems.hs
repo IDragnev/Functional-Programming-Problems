@@ -42,8 +42,8 @@ occurrences lhs rhs = map (\x -> timesFound x rhs) lhs
 
 matchingLengths :: [[t]] -> Bool
 matchingLengths [] = True
-matchingLengths list = all (==h) lens
- where lens@(h:_) = map length list
+matchingLengths list = all (==h) t
+ where (h:t) = map length list
    
 setInsert :: Ord t => t -> [t] -> [t]    
 setInsert x [] = [x]
