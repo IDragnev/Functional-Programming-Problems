@@ -60,3 +60,10 @@ setIntersect lhs rhs = filter ((flip elem) rhs) lhs
 
 setDiff :: Eq t => [t] -> [t] -> [t]
 setDiff lhs rhs = filter (\x -> not (elem x rhs)) lhs
+
+column :: Int -> [[Int]] -> [Int]
+column n = concat . map (take (n - 1))
+
+row = flip (!!)
+
+splitMatrixAt n matrix = (take (n - 1) matrix, drop n matrix)
