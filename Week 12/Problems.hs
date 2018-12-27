@@ -82,4 +82,3 @@ listToBST = foldr bstInsert BEmpty
 
 bstSort :: Ord t => [t] -> [t] 
 bstSort = bstToList . listToBST
-
