@@ -55,7 +55,8 @@ genTransitions from with states = map (\q -> (from, with, q)) states
 mergingTransitions :: NFA -> NFA -> [Transition]
 mergingTransitions (NFA _ _ finalsLhs deltaLhs) (NFA _ initialsRhs _ _) = 
   let transitionsToFinal = filter (\(_, _, q) -> elem q finalsLhs) deltaLhs
-      transitionsToInitial = map (\(from, with, to) -> genTransitions from with initialsRhs) transitionsToFinal 
+      transitionsToInitial = 
+        map (\(from, with, to) -> genTransitions from with initialsRhs) transitionsToFinal 
   in concat transitionsToInitial
 
 initialStatesOfConcatenation :: NFA -> NFA -> [State]
@@ -82,28 +83,24 @@ star :: NFA -> NFA
 star nfa = union (plus nfa) epsilon
 
 matches :: String -> NFA -> Bool
-matches word nfa = any (\q -> canWalk word nfa q) (states nfa)
+matches word nfa = any (\q -> canWalk word nfa q) (initialStates nfa)
 
 canWalk :: String -> NFA -> State -> Bool
-canWalk [] (NFA _ _ finals _) q = elem q finals
+canWalk [] (NFA _ _ finals _) q = elem q finals 
 canWalk (h:t) nfa@(NFA states initials finals delta) q = 
-    any (\(q1, h, q2) -> q == q1 && canWalk t nfa q2) delta
+    any (\(q1, c, q2) -> q == q1 && h == c && canWalk t nfa q2) delta
 
-isLetter :: Char -> Bool
-isLetter x = elem x ['A'.. 'Z'] || elem x ['a'.. 'z']
-
-fromSymbol :: Char -> NFA
-fromSymbol _ = epsilon
-fromSynbol = singleton
-
---fromRegex :: String -> NFA
---fromRegex regex = buildNFA emptyNFA regex
--- where
---    buildNFA :: NFA -> String -> NFA
---   buildNFA result [] = result
---    buildNFA result (')':'+':t) = concatenate (plus result) (buildNFA emptyNFA t)
---    buildNFA result (')':'*':t) = concatenate (star result) (buildNFA emptyNFA t)
---    buildNFA result (x:'*':t) = concatenate $ (concatenate result (star $ fromSymbol x)) (buildNFA emptyNFA t)
---    buildNFA result (x:'+':t) = concatenate $ (concatenate result (plus $ fromSymbol x)) (buildNFA emptyNFA t)
---    buildNFA result (h:t) =  concatenate (fromSymbol h) (buildNFA emptyNFA t)
---    emptyNFA = (NFA [] [] [] [])
+fromRegex :: String -> NFA
+fromRegex ('(':t) = fromRegex t
+fromRegex (c:[]) = singleton c
+fromRegex (c:"*") = star (singleton c)
+fromRegex (c:"+") = plus (singleton c)
+fromRegex (h:t) = buildNFA (singleton h) t
+ where
+   buildNFA result [] = result
+   buildNFA result ")" = result
+   buildNFA result (')':'+':t) = buildNFA (plus result) t
+   buildNFA result (')':'*':t) = buildNFA (star result) t
+   buildNFA result (x:'*':t) = buildNFA (concatenate result (star $ singleton x)) t
+   buildNFA result (x:'+':t) = buildNFA (concatenate result (plus $ singleton x)) t
+   buildNFA result (h:t) =  buildNFA (concatenate result (singleton h)) t
