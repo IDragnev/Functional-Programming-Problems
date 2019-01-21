@@ -90,19 +90,18 @@ canWalk [] (NFA _ _ finals _) q = elem q finals
 canWalk (h:t) nfa@(NFA states initials finals delta) q = 
     any (\(q1, c, q2) -> q == q1 && h == c && canWalk t nfa q2) delta
 
---incomplete
 fromRegex :: String -> NFA
 fromRegex ('(':t) = fromRegex t
 fromRegex (c:[]) = singleton c
-fromRegex (c:"*") = star (singleton c)
-fromRegex (c:"+") = plus (singleton c)
+fromRegex (c:'*':t) = buildNFA (star $ singleton c) t
+fromRegex (c:'+':t) = buildNFA (plus $ singleton c) t
 fromRegex (h:t) = buildNFA (singleton h) t
- where
-   buildNFA result [] = result
-   buildNFA result ")" = result
-   buildNFA result (')':'+':t) = buildNFA (plus result) t
-   buildNFA result (')':'*':t) = buildNFA (star result) t
-   buildNFA result ('|':t) = union result (fromRegex t)
-   buildNFA result (x:'*':t) = buildNFA (concatenate result (star $ singleton x)) t
-   buildNFA result (x:'+':t) = buildNFA (concatenate result (plus $ singleton x)) t
-   buildNFA result (h:t) =  buildNFA (concatenate result (singleton h)) t
+
+buildNFA result [] = result
+buildNFA result ")" = result
+buildNFA result (')':'+':t) = buildNFA (plus result) t
+buildNFA result (')':'*':t) = buildNFA (star result) t
+buildNFA result ('|':t) = union result (fromRegex t)
+buildNFA result (x:'*':t) = buildNFA (concatenate result (star $ singleton x)) t
+buildNFA result (x:'+':t) = buildNFA (concatenate result (plus $ singleton x)) t
+buildNFA result (h:t) =  buildNFA (concatenate result (singleton h)) t
