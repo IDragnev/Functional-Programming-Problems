@@ -101,23 +101,21 @@ semanticallyEquivalent fi psi = fi |= psi && psi |= fi
 
 (|=|) = semanticallyEquivalent
 
-{-
-isAxiom :: Prop -> Bool
--- THEN-1
-isAxiom (fi `Implies` (psi `Implies` chi)) = fi == chi
---THEN-2
-isAxiom ((fi `Implies` (chi `Implies` psi)) `Implies` ((theta `Implies` eta) `Implies` (alpha `Implies` beta))) = fi == theta && fi == alpha && chi == eta &&  psi == beta
--- AND-1 or AND-2
+isAxiom:: Prop -> Bool
+isAxiom ((fi `Implies` (chi `Implies` psi)) `Implies` ((alpha `Implies` beta) `Implies` (gamma `Implies` theta))) =
+ fi == alpha && fi == gamma && chi == beta && psi == theta
+isAxiom ((fi `Implies` psi) `Implies` ((chi `Implies` alpha) `Implies` ((beta `Or` gamma) `Implies` theta))) =
+ fi == beta && psi == alpha && psi == theta && chi == gamma
+isAxiom ((fi `Implies` psi) `Implies` ((chi `Implies` (Not alpha)) `Implies` (Not beta))) =
+ fi == chi && fi == beta && psi == alpha
+isAxiom (fi `Implies` ((Not psi) `Implies` _)) = fi == psi
+isAxiom (fi `Implies` (chi `Implies` (psi `And` theta))) = fi == psi && chi == theta
+isAxiom (fi `Implies` (chi `Implies` psi)) = fi == psi
 isAxiom ((fi `And` psi) `Implies` chi) = fi == chi || psi == chi
--- AND-3
-isAxiom (fi `Implies` (chi `Implies` (psi `And` eta))) = fi == psi && chi == eta
--- OR-1 or OR-2
 isAxiom (fi `Implies` (psi `Or` chi)) = fi == psi || fi == chi
--- OR-3
-isAxiom ((phi `Implies` psi ) `Implies` ((chi `Implies` eta) `Implies` ((theta `Or` alpha) `Implies` beta))) = phi == theta && psi == eta && psi == beta && chi == theta
---NOT-1
-isAxiom ((fi `Implies` chi) `Implies` ((psi `Implies` Not eta) `Implies` Not theta)) = fi == psi && fi == theta && chi == eta
--- NOT-2
-isAxiom (fi `Implies` (Not psi `Implies` _)) = fi == psi 
-isAxiom (fi `Or` Not psi) = fi == psi
--} 
+isAxiom (fi `Or` (Not psi)) = fi == psi
+isAxiom _ = False
+
+modusPonens :: Prop -> Prop -> Prop -> Bool
+modusPonens fi (psi `Implies` chi) theta = fi == psi && chi == theta
+modusPonens _ _ _ = False
