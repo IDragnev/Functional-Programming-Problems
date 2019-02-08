@@ -8,8 +8,8 @@ data Date = Date { year :: Int
 		 , day :: Int }
        deriving (Eq, Ord)
 
-fromString :: String -> Date
-fromString  str = Date year month day
+dateFromString :: String -> Date
+dateFromString str = Date year month day
     where year  = read $ take 4 str 
           month = read $ drop 5 $ take 7 str
 	  day   = read $ drop 8 str
@@ -48,13 +48,15 @@ formatYear year = alignMonths months
  where months = map formatMonth year
 
 alignMonths :: [[String]] -> [[String]]
-alignMonths months =
-  let maxLen = maximum $ map length months 
-  in map (\m -> m ++ padding m) months 
-	where padding month = replicate (difference month) emptyRow  
-           where difference month = maxLen - length month 			
-                 emptyRow   = replicate 35 ' ' 		   
- 
+alignMonths months = map (paddMonth maxLen) months
+  where maxLen = maximum $ map length months 
+	 		   
+paddMonth :: Int -> [String] -> [String]
+paddMonth maxLen month = month ++ padding 
+ where padding = replicate n emptyRow
+       emptyRow = replicate 35 ' '
+       n = maxLen - length month
+
 formatMonth :: [[Date]] -> [String]
 formatMonth = map formatWeek 
 
@@ -72,7 +74,7 @@ weekOf (Date y m d) = week
 
 datesOf :: Integer -> [Date]
 datesOf year = init dates
- where dates = map (fromString . show) [start .. end]
+ where dates = map (dateFromString . show) [start .. end]
        start = fromGregorian year jan 1
        end   = fromGregorian (year + 1) jan 1
        jan   = 1
