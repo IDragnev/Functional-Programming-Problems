@@ -15,21 +15,31 @@ dateFromString str = Date year month day
 	  day   = read $ drop 8 str
 
 instance Show Date where
-  show (Date year month day) = show day ++ "/" ++ show month ++ "/" ++ show year  
+  show (Date y m d) = show d ++ "/" ++ show m ++ "/" ++ show y  
 
 main :: IO ()
 main = do
  year <- getYear
- let dates = groupDatesOf year
- let formated = formatYear dates
- let withMonthNames = addMonthNames formated
- putStrLn ""
+ let calendar = formatYear $ groupDatesOf year
+ let withMonthNames = addMonthNames calendar
+ let chunked = chunk 2  withMonthNames
+ let zipped = map combine chunked
+ mapM_ (mapM_ putStrLn) zipped
+ putStrLn "" 
 
 chunk :: Int -> [t] -> [[t]]
 chunk _ []   = []
 chunk n list = first : chunkedRest
  where (first, rest) = splitAt n list
        chunkedRest   = chunk n rest
+
+rowWidth :: Int
+rowWidth = 27
+
+combine :: [[String]] -> [String]
+combine [lhs, rhs] = zipWith (\x y -> x ++ space x y ++ y) lhs rhs
+ where space x y = replicate n ' '
+         where n = 3*rowWidth - (length x + length y)
 
 getYear :: IO Integer
 getYear = do
@@ -39,10 +49,13 @@ getYear = do
 
 addMonthNames :: [[String]] -> [[String]]
 addMonthNames = zipWith (:) names
- where names = ["January", "February", "March", "April",
-                "May", "June", "July", "August", 
-		"September", "October", "November", "December"]
-
+ where names = zipWith (\month len -> prefix len ++ month) months lens
+       months = ["January", "February", "March", "April",
+                 "May", "June", "July", "August", 
+		 "September", "October", "November", "December"]
+       lens    = map length months
+       prefix n = replicate (rowWidth - n) ' ' 
+      
 formatYear :: [[[Date]]] -> [[String]]
 formatYear year = alignMonths months
  where months = map formatMonth year
@@ -54,14 +67,26 @@ alignMonths months = map (paddMonth maxLen) months
 paddMonth :: Int -> [String] -> [String]
 paddMonth maxLen month = month ++ padding 
  where padding = replicate n emptyRow
-       emptyRow = replicate 35 ' '
+       emptyRow = replicate rowWidth ' '
        n = maxLen - length month
 
 formatMonth :: [[Date]] -> [String]
 formatMonth = map formatWeek 
 
 formatWeek :: [Date] -> String
-formatWeek = concat . map (\(Date _ _ day) -> " " ++ show day ++ " ")
+formatWeek = alignWeek . concat . asStrings  
+  where asStrings = map toCalendarDate
+        toCalendarDate (Date _ _ day) = prefix ++ show day ++ suffix
+	 where prefix = if day < 10 then "  " else  " "
+               suffix = " "
+
+alignWeek :: String -> String
+alignWeek week@(_:date:t)
+ | len == rowWidth              = week 
+ | len < rowWidth && date == '1' = padding ++ week
+ | otherwise                    = week ++ padding
+ where len = length week
+       padding = replicate (rowWidth - len) ' '
 
 groupDatesOf :: Integer -> [[[Date]]]
 groupDatesOf year = map (groupBy weekOf) groupedByMonth
