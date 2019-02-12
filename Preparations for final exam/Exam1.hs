@@ -47,17 +47,32 @@ descartes [] = [[]]
 descartes (h:t) = [ x:y | x <- h, y <- descartes t ]
 
 allEqual :: Eq f => [[t]] -> [(t -> f)] -> [[t]]
-allEqual lists funs = filter p (descartes lists)
-   where p xs = same $ zipWith ($) funs xs
+allEqual = allWithProperty same
+
+allIncreasing :: (Num f, Ord f) => [[t]] -> [(t -> f)] -> [[t]]
+allIncreasing = allWithProperty isArithmeticProg
+
+allWithProperty :: ([f] -> Bool) -> [[t]] -> [(t -> f)] -> [[t]]
+allWithProperty property lists funs = filter p (descartes lists)
+  where p xs = property $ zipWith ($) funs xs
 
 same :: Eq t => [t] -> Bool
 same []     = True
 same (x:xs) = and $ map (==x) xs
 
+isArithmeticProg :: (Num t, Ord t) => [t] -> Bool
+isArithmeticProg list = same $ zipWith (flip (-)) list (tail list)
+
 -- task 4
 
 data Ingredient = Ingredient { nameOf :: String, quantity :: Int }
-  deriving (Eq, Ord, Show, Read)
+  deriving (Show, Read)
+
+instance Eq Ingredient where
+ (Ingredient name1 _) == (Ingredient name2 _) = name1 == name2
+
+instance Ord Ingredient where
+ compare (Ingredient name1 _) (Ingredient name2 _) = compare name1 name2
 
 data Medicine = Medicine { name :: String, ingredients :: [Ingredient] }
  deriving (Show, Read)
@@ -68,21 +83,37 @@ medicineC = Medicine "C" [(Ingredient "p" 3)]
 medicineD = Medicine "D" [(Ingredient "p" 6), (Ingredient "q" 9)]
 
 isSubstitute :: Medicine -> Medicine -> Bool
-isSubstitute (Medicine _ ingsLhs) (Medicine _ ingsRhs) = sameLengths && sameNames && sameProportions
+isSubstitute lhs rhs = sameNames && sameProportions
   where sameNames = and $ zipWith (\x y -> nameOf x == nameOf y) ingsLhs ingsRhs
         sameProportions = same $ proportions ingsLhs ingsRhs
-	sameLengths = length ingsLhs == length ingsRhs
+	[(Medicine _ ingsLhs), (Medicine _ ingsRhs)] = map sortIngredients [lhs, rhs]
+
+sortIngredients :: Medicine -> Medicine
+sortIngredients (Medicine name ingredients) = Medicine name $ sortByName ingredients
+ where sortByName = sortBy (\lhs rhs -> nameOf lhs <= nameOf rhs)
+
+sortBy :: Ord t => (t -> t -> Bool) -> [t] -> [t]
+sortBy _ [] = []
+sortBy compare (h:t) = smaller ++ h:greater
+ where smaller = filter (compare h) t
+       greater = filter (not . compare h) t
+
+sort = sortBy (<=)
 
 proportions :: [Ingredient] -> [Ingredient] -> [Double]
 proportions = zipWith (\(Ingredient _ x) (Ingredient _ y) -> (fromIntegral x) / (fromIntegral y)) 
 
 bestSubstitute :: Medicine -> [Medicine] -> Medicine
-bestSubstitute x@(Medicine _ ings) meds = best
- where (best, _) = maximumBy (\(_, (x:_)) (_, (y:_)) -> distance x <= distance y) pairs
-       distance z = abs (1 - z)
-       pairs = zip substitutes $ props
-       props = map (\(Medicine _ ingsM) -> proportions ings ingsM) substitutes 
-       substitutes = filter (isSubstitute x) meds
+bestSubstitute x meds = best
+ where (best, _) = maximumBy closestProportion pairs 
+       closestProportion = (\(_, prop1) (_, prop2) -> distanceToOne prop1 <= distanceToOne prop2) 
+       pairs = zip substitutes $ map head props
+       props = map (proportions ingsX . ingredients) substitutes 
+       substitutes = filter (isSubstitute x) $ withSortedIngredients
+       ((Medicine _ ingsX):withSortedIngredients) = map sortIngredients (x:meds) 
+      
+distanceToOne :: Floating t => t -> t
+distanceToOne = abs . (1-)
 
 maximumBy :: (t -> t -> Bool) -> [t] -> t
 maximumBy _ [] = error "Empty list passed to maximumBy"
@@ -98,3 +129,40 @@ splitBy :: (t -> Bool) -> [t] -> ([t], [t])
 splitBy p list = (first, second)
  where first  = filter p list
        second = filter (not . p) list
+
+isStronger :: Medicine -> Medicine -> Bool
+isStronger lhs@(Medicine _ ingsLhs) rhs@(Medicine _ ingsRhs) = isRhsSubset && lhsHasAtLeastSameQuantities && atLeastOneIsGreater   
+ where isRhsSubset = isSubset ingsRhs ingsLhs 
+       matchingIngs = matchingIngsInLhs lhs rhs
+       quantitiesLhs = quantities matchingIngs
+       quantitiesRhs = quantities $ sort ingsRhs
+       lhsHasAtLeastSameQuantities = quantitiesLhs >= quantitiesRhs
+       atLeastOneIsGreater = or $ zipWith (>) quantitiesLhs quantitiesRhs 
+  
+matchingIngsInLhs lhs rhs = sort [ x | x <- (ingredients lhs), elem x (ingredients rhs) ]
+
+quantities :: [Ingredient] -> [Int]
+quantities = map quantity
+
+isSubset :: Eq t => [t] -> [t] -> Bool
+isSubset lhs rhs = and $ map ((flip elem) rhs) lhs  
+
+leastStronger :: Medicine -> [Medicine] -> String
+leastStronger x meds 
+ | null stronger = ""
+ | otherwise     = let ((Medicine name _),_) = maximumBy (\(med1, sum1) (med2, sum2) -> sum1 <= sum2) pairs in name
+ where stronger = filter (\med -> isStronger med x) meds
+       sortedStronger = map sortIngredients stronger
+       sumOfdiffs = map (sumOfdifferences x) sortedStronger
+       pairs = zip sortedStronger sumOfdiffs
+       
+sumOfdifferences lhs rhs = sum $ zipWith (-) quantitiesLhs quantitiesRhs
+  where matchingIngs = matchingIngsInLhs lhs rhs
+        quantitiesLhs = quantities matchingIngs
+	quantitiesRhs = quantities (ingredients rhs)
+
+strongRelation :: [Medicine] -> [(Medicine, [String])]
+strongRelation list = [ (med, names med list) | med <- list ]
+ where names med list = map name stronger
+        where stronger = filter (\m -> isStronger m med) list 
+ 
