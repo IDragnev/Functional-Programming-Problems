@@ -27,6 +27,16 @@ search (Node root left right) path
  where foundInLeft  = search left (0:path)
        foundInRight = search right (1:path) 
 
+countSameAsCode :: Tree -> Int
+countSameAsCode t = countCodes t [1]
+
+countCodes :: Tree -> Path -> Int
+countCodes Empty _ = 0
+countCodes (Node root left right) path = sum [forRoot, inLeft, inRight]
+ where forRoot = if root == fromBinary path then 1 else 0 
+       inLeft  = countCodes left  (0:path)
+       inRight = countCodes right (1:path)
+
 fromBinary :: Path -> Int
 fromBinary path = sum $ zipWith (\bit k -> bit * (2^k)) path powers
   where powers = [0 .. (length path) - 1] 
